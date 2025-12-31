@@ -94,10 +94,10 @@ def login(username: str, password: str) -> bool:
 
 def insecure_hash(data: str) -> str:
     """
-    Berechnet einen Hash ber die eingegebenen Daten.
+    Berechnet einen SHA256 Hash über die eingegebenen Daten.
     """
-    h = hashlib.md5(data.encode("utf-8")).hexdigest()
-    logger.debug(f"Calculated insecure MD5 hash for data={data}: {h}")
+    h = hashlib.sha256(data.encode("utf-8")).hexdigest()
+    logger.debug(f"Calculated SHA256 hash for data={data}: {h}")
     return h
 
 
@@ -190,7 +190,7 @@ def main_menu():
     print(f" Version: {APP_VERSION}")
     print("=" * 50)
     print("1) Login")
-    print("2) Insecure Hash berechnen (MD5)")
+    print("2) Hash berechnen (SHA256)")
     print("3) Host anpingen (Command Injection mglich)")
     print("4) Nach Update suchen & anwenden")
     print("5) Beenden")
@@ -213,9 +213,9 @@ def main():
             print("Login erfolgreich!" if success else "Login fehlgeschlagen.")
 
         elif choice == "2":
-            data = input("Text fr Hash-Berechnung: ")
+            data = input("Text für Hash-Berechnung: ")
             h = insecure_hash(data)
-            print(f"MD5-Hash: {h}")
+            print(f"SHA256-Hash: {h}")
 
         elif choice == "3":
             host = input("Host/IP zum Pingen: ")
