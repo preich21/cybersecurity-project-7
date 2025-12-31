@@ -17,9 +17,13 @@ import bcrypt
 import requests
 import time
 
+from dotenv import load_dotenv
+
 # ---------------------------------------------------------
 # Globale Konfiguration (mehrere Schwachstellen hier drin)
 # ---------------------------------------------------------
+
+load_dotenv()
 
 # Might as well be removed completely, since the app doesn't actually use it.
 # However, we keep it to illustrate the concept of secret keys.
