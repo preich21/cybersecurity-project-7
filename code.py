@@ -74,7 +74,7 @@ def login(username: str, password: str) -> bool:
     """
     Sehr vereinfachter Login.
     """
-    logger.info(f"Login attempt for user={username} with password={password}")
+    logger.info(f"Login attempt for user={username}")
 
     stored_pw_hash = USERS.get(username)
     if stored_pw_hash is None:
