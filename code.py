@@ -68,6 +68,7 @@ def create_user_db():
 
 
 USERS = create_user_db()
+LOGGED_IN_USER: str|None = None
 
 
 def login(username: str, password: str) -> bool:
@@ -85,11 +86,37 @@ def login(username: str, password: str) -> bool:
     stored_pw_hash_bytes = stored_pw_hash.encode("utf-8")
     if bcrypt.checkpw(pw_bytes, stored_pw_hash_bytes):
         logger.info(f"User {username} successfully logged in")
+        global LOGGED_IN_USER
+        LOGGED_IN_USER = username
         return True
 
     logger.warning("Invalid password")
     return False
 
+
+def validate_authentication() -> bool:
+    """
+    Dummy function for user authentication validation.
+    Optimally, in a real application, the user should decorate each request with a valid JWT token or session cookie which we then verify here.
+    For simplicity, we assume the user is correctly authenticated once they have logged in.
+    """
+    if LOGGED_IN_USER is None:
+        logger.warning("User not authenticated.")
+        return False
+    elif USERS.get(LOGGED_IN_USER) is None:
+        logger.warning("Authenticated user not found in user database. This should never happen.")
+        return False
+    return True
+
+
+def logout() -> None:
+    """
+    Logs out the current user.
+    """
+    global LOGGED_IN_USER
+    if LOGGED_IN_USER:
+        logger.info(f"User {LOGGED_IN_USER} logged out.")
+    LOGGED_IN_USER = None
 
 
 def insecure_hash(data: str) -> str:
@@ -213,27 +240,37 @@ def main():
             print("Login erfolgreich!" if success else "Login fehlgeschlagen.")
 
         elif choice == "2":
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
             data = input("Text für Hash-Berechnung: ")
             h = insecure_hash(data)
             print(f"SHA256-Hash: {h}")
 
         elif choice == "3":
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
             host = input("Host/IP zum Pingen: ")
             ping_host(host)
 
         elif choice == "4":
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
             if check_for_update():
                 path = download_update()
                 apply_update(path)
             else:
-                print("Kein Update verfgbar.")
+                print("Kein Update verfügbar.")
 
         elif choice == "5":
+            logout()
             print("Beende Programm.")
             break
 
         else:
-            print("Ungltige Auswahl.")
+            print("Ungültige Auswahl.")
 
 
 if __name__ == "__main__":
