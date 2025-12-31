@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""
+Starter-Code fr Projekt C: CRA-konformes Patch- & Vulnerability-Handling
+
+ACHTUNG:
+Dieses Programm enthlt ABSICHTLICH mehrere Sicherheitslcken und
+Designschwchen. Es dient ausschlielich Ausbildungszwecken
+(Secure Coding, CRA, Vulnerability Handling).
+
+NICHT in Produktion einsetzen!
+"""
+
+import os
+import hashlib
+import logging
+import requests
+import time
+
+# ---------------------------------------------------------
+# Globale Konfiguration (mehrere Schwachstellen hier drin)
+# ---------------------------------------------------------
+
+SECRET_KEY = "1234567890abcdef"  
+
+DEBUG = True
+
+
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
+logger = logging.getLogger("insecure_app")
+
+APP_VERSION = "1.0.0" 
+
+
+# ---------------------------------------------------------
+# Dummy-User-Verwaltung (mit Schwachstellen)
+# ---------------------------------------------------------
+
+USERS = {
+    "alice": "password123",  
+    "bob": "qwerty",
+}
+
+
+def login(username: str, password: str) -> bool:
+    """
+    Sehr vereinfachter Login.
+    """
+    logger.info(f"Login attempt for user={username} with password={password}")
+
+    stored_pw = USERS.get(username)
+    if stored_pw is None:
+        logger.warning("Unknown user")
+        return False
+
+    if stored_pw == password:
+        logger.info(f"User {username} successfully logged in")
+        return True
+
+    logger.warning("Invalid password")
+    return False
+
+
+
+def insecure_hash(data: str) -> str:
+    """
+    Berechnet einen Hash ber die eingegebenen Daten.
+    """
+    h = hashlib.md5(data.encode("utf-8")).hexdigest()
+    logger.debug(f"Calculated insecure MD5 hash for data={data}: {h}")
+    return h
+
+
+
+def ping_host(host: str) -> None:
+    """
+    Pingt einen Host an.
+   """
+    command = f"ping -c 1 {host}"
+    logger.info(f"Executing command: {command}")
+    os.system(command)  # <-- unsicher, host kann z. B. '8.8.8.8; rm -rf /' sein
+
+
+# ---------------------------------------------------------
+# Simulierter Update-Mechanismus
+# ---------------------------------------------------------
+
+UPDATE_URL = "http://example.com/fake-update.txt"
+LOCAL_UPDATE_FILE = "update_payload.txt"
+
+
+def check_for_update() -> bool:
+    """
+    Simuliert eine Update-Prfung.
+    In der Realitt wrde z. B. eine API-Version abgefragt werden.
+
+    Hier wird einfach "zufllig" entschieden.
+    """
+    # zur Vereinfachung: wir tun so, als gbe es alle 2 Aufrufe ein "Update"
+    ts = int(time.time())
+    if ts % 2 == 0:
+        logger.info("Update available (simuliert)")
+        return True
+    else:
+        logger.info("No update available (simuliert)")
+        return False
+
+
+def download_update() -> str:
+    """
+    Simuliert den Download eines Updates von einem externen Server.
+    """
+    logger.info(f"Downloading update from {UPDATE_URL}")
+
+    try:
+        resp = requests.get(UPDATE_URL) 
+        if resp.status_code == 200:
+            payload = resp.text
+            with open(LOCAL_UPDATE_FILE, "w", encoding="utf-8") as f:
+                f.write(payload)
+            logger.info("Update downloaded and stored locally.")
+            return LOCAL_UPDATE_FILE
+        else:
+            logger.error(f"Update server responded with status {resp.status_code}")
+            return ""
+    except Exception as ex:
+        logger.exception(f"Error while downloading update: {ex}")
+        return ""
+
+
+def apply_update(file_path: str) -> None:
+    """
+    Simuliert das Anwenden eines Updates.
+    """
+    if not file_path:
+        logger.error("No update file to apply.")
+        return
+
+    logger.warning(f"Applying update from {file_path} WITHOUT validation (insecure).")
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Wir tun nur so, als wrden wir "Code" bernehmen.
+        # In einer echten (noch schlechteren) Variante knnte man hier exec() aufrufen.
+            logger.debug(f"Update content preview:\n{content[:200]}")
+
+            logger.info("Update applied (simuliert).")
+    except Exception as ex:
+        logger.exception(f"Failed to apply update: {ex}")
+
+
+# ---------------------------------------------------------
+# Einfaches CLI-Menu
+# ---------------------------------------------------------
+
+def main_menu():
+    print("=" * 50)
+    print(" Insecure Demo App (nur zu Schulungszwecken) ")
+    print(f" Version: {APP_VERSION}")
+    print("=" * 50)
+    print("1) Login")
+    print("2) Insecure Hash berechnen (MD5)")
+    print("3) Host anpingen (Command Injection mglich)")
+    print("4) Nach Update suchen & anwenden")
+    print("5) Beenden")
+    print()
+
+    choice = input("Auswahl: ").strip()
+    return choice
+
+
+def main():
+    logger.info("Application started (INSECURE DEMO MODE)")
+
+    while True:
+        choice = main_menu()
+
+        if choice == "1":
+            username = input("Benutzername: ")
+            password = input("Passwort: ")
+            success = login(username, password)
+            print("Login erfolgreich!" if success else "Login fehlgeschlagen.")
+
+        elif choice == "2":
+            data = input("Text fr Hash-Berechnung: ")
+            h = insecure_hash(data)
+            print(f"MD5-Hash: {h}")
+
+        elif choice == "3":
+            host = input("Host/IP zum Pingen: ")
+            ping_host(host)
+
+        elif choice == "4":
+            if check_for_update():
+                path = download_update()
+                apply_update(path)
+            else:
+                print("Kein Update verfgbar.")
+
+        elif choice == "5":
+            print("Beende Programm.")
+            break
+
+        else:
+            print("Ungltige Auswahl.")
+
+
+if __name__ == "__main__":
+    main()
+
