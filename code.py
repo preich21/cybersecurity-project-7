@@ -43,10 +43,26 @@ APP_VERSION = "1.0.0"
 # Dummy-User-Verwaltung (mit Schwachstellen)
 # ---------------------------------------------------------
 
-USERS = {
-    "alice": "password123",  
-    "bob": "qwerty",
-}
+def create_user_db():
+    """
+    Creates a dummy user database.
+    In a real project, we should definitely use a proper database that doesn't live in memory.
+    """
+    result = {}
+
+    initial_users = os.getenv("INITIAL_USERS")
+    if initial_users:
+        for entry in initial_users.split(","):
+            try:
+                username, password = entry.split(":")
+                result[username.strip()] = password.strip()
+            except ValueError:
+                raise RuntimeError(f"Invalid user entry in the INITIAL_USERS env variable: {entry}")
+
+    return result
+
+
+USERS = create_user_db()
 
 
 def login(username: str, password: str) -> bool:
