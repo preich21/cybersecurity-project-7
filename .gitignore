@@ -1,1 +1,4 @@
 .idea/
+
+# In a real project we must never commit the .env file which contains sensitive information
+# .env

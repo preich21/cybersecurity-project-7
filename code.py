@@ -20,7 +20,11 @@ import time
 # Globale Konfiguration (mehrere Schwachstellen hier drin)
 # ---------------------------------------------------------
 
-SECRET_KEY = "1234567890abcdef"  
+# Might as well be removed completely, since the app doesn't actually use it.
+# However, we keep it to illustrate the concept of secret keys.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("Environment variable SECRET_KEY is not set!")
 
 DEBUG = True
 
