@@ -97,7 +97,7 @@ def insecure_hash(data: str) -> str:
     Berechnet einen SHA256 Hash über die eingegebenen Daten.
     """
     h = hashlib.sha256(data.encode("utf-8")).hexdigest()
-    logger.debug(f"Calculated SHA256 hash for data={data}: {h}")
+    logger.debug(f"Calculated SHA256 hash") # We could remove the whole log line, but maybe it's useful for tracing or something.
     return h
 
 
