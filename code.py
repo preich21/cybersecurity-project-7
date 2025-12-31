@@ -13,6 +13,7 @@ NICHT in Produktion einsetzen!
 import os
 import hashlib
 import logging
+import bcrypt
 import requests
 import time
 
@@ -71,12 +72,14 @@ def login(username: str, password: str) -> bool:
     """
     logger.info(f"Login attempt for user={username} with password={password}")
 
-    stored_pw = USERS.get(username)
-    if stored_pw is None:
-        logger.warning("Unknown user")
+    stored_pw_hash = USERS.get(username)
+    if stored_pw_hash is None:
+        logger.warning(f"Unknown user [{username}]")
         return False
 
-    if stored_pw == password:
+    pw_bytes = password.encode("utf-8")
+    stored_pw_hash_bytes = stored_pw_hash.encode("utf-8")
+    if bcrypt.checkpw(pw_bytes, stored_pw_hash_bytes):
         logger.info(f"User {username} successfully logged in")
         return True
 
