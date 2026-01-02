@@ -3,8 +3,8 @@
 Starter-Code fr Projekt C: CRA-konformes Patch- & Vulnerability-Handling
 
 ACHTUNG:
-Dieses Programm enthlt ABSICHTLICH mehrere Sicherheitslcken und
-Designschwchen. Es dient ausschlielich Ausbildungszwecken
+Dieses Programm enthält ABSICHTLICH mehrere Sicherheitslücken und
+Designschwächen. Es dient ausschlielich Ausbildungszwecken
 (Secure Coding, CRA, Vulnerability Handling).
 
 NICHT in Produktion einsetzen!
@@ -153,7 +153,7 @@ def check_for_update() -> bool:
 
     Hier wird einfach "zufllig" entschieden.
     """
-    # zur Vereinfachung: wir tun so, als gbe es alle 2 Aufrufe ein "Update"
+    # zur Vereinfachung: wir tun so, als gäbe es alle 2 Aufrufe ein "Update"
     ts = int(time.time())
     if ts % 2 == 0:
         logger.info("Update available (simuliert)")
@@ -198,8 +198,8 @@ def apply_update(file_path: str) -> None:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Wir tun nur so, als wrden wir "Code" bernehmen.
-        # In einer echten (noch schlechteren) Variante knnte man hier exec() aufrufen.
+        # Wir tun nur so, als würden wir "Code" übernehmen.
+        # In einer echten (noch schlechteren) Variante könnte man hier exec() aufrufen.
             logger.debug(f"Update content preview:\n{content[:200]}")
 
             logger.info("Update applied (simuliert).")
