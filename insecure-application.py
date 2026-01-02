@@ -3,7 +3,7 @@
 Starter-Code fr Projekt C: CRA-konformes Patch- & Vulnerability-Handling
 
 ACHTUNG:
-Dieses Programm enthlt ABSICHTLICH mehrere Sicherheitslcken und
+Dieses Programm enthält ABSICHTLICH mehrere Sicherheitslücken und
 Designschwächen. Es dient ausschlielich Ausbildungszwecken
 (Secure Coding, CRA, Vulnerability Handling).
 
