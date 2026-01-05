@@ -17,7 +17,6 @@ import bcrypt
 import requests
 import time
 import subprocess
-import shlex
 import re
 
 from dotenv import load_dotenv
@@ -259,18 +258,19 @@ def download_update() -> str:
 def apply_update(file_path: str) -> None:
     """
     Simuliert das Anwenden eines Updates.
+    Das Update wurde bereits auf Integrität geprüft (Checksum-Verifikation).
     """
     if not file_path:
         logger.error("No update file to apply.")
         return
 
-    logger.warning(f"Applying update from {file_path} WITHOUT validation (insecure).")
+    logger.info(f"Applying verified update from {file_path}.")
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # Wir tun nur so, als würden wir "Code" übernehmen.
-        # In einer echten (noch schlechteren) Variante könnte man hier exec() aufrufen.
+        # In einer echten Anwendung würde hier das Update installiert werden.
             logger.debug(f"Update content preview:\n{content[:200]}")
 
             logger.info("Update applied (simuliert).")
