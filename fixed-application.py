@@ -45,7 +45,7 @@ APP_VERSION = "1.1.0"
 
 
 # ---------------------------------------------------------
-# Dummy-User-Verwaltung (mit Schwachstellen)
+# Dummy-User-Verwaltung
 # ---------------------------------------------------------
 
 def create_user_db():
