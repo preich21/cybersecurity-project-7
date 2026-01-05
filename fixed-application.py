@@ -16,6 +16,9 @@ import logging
 import bcrypt
 import requests
 import time
+import subprocess
+import shlex
+import re
 
 from dotenv import load_dotenv
 
@@ -131,19 +134,51 @@ def insecure_hash(data: str) -> str:
 
 def ping_host(host: str) -> None:
     """
-    Pingt einen Host an.
-   """
-    command = f"ping -c 1 {host}"
-    logger.info(f"Executing command: {command}")
-    os.system(command)  # <-- unsicher, host kann z. B. '8.8.8.8; rm -rf /' sein
+    Pingt einen Host an mit sicherer Eingabevalidierung.
+    """
+    # Validate host input to prevent command injection
+    # Allow only valid hostnames and IP addresses
+    if not re.match(r'^[a-zA-Z0-9\.\-]+$', host):
+        logger.error(f"Invalid host format: {host}")
+        print("Fehler: Ungültiges Host-Format. Nur Buchstaben, Zahlen, Punkte und Bindestriche sind erlaubt.")
+        return
+    
+    # Additional validation: limit length to prevent abuse
+    if len(host) > 253:  # Max DNS hostname length
+        logger.error(f"Host name too long: {host}")
+        print("Fehler: Host-Name zu lang.")
+        return
+    
+    logger.info(f"Executing ping for host: {host}")
+    
+    try:
+        # Use subprocess with list of arguments instead of shell=True
+        # This prevents command injection
+        result = subprocess.run(
+            ["ping", "-c", "1", host],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False
+        )
+        print(result.stdout)
+        if result.returncode != 0:
+            print(f"Ping fehlgeschlagen (exit code: {result.returncode})")
+    except subprocess.TimeoutExpired:
+        logger.error(f"Ping timeout for host: {host}")
+        print("Fehler: Ping-Timeout überschritten.")
+    except Exception as ex:
+        logger.exception(f"Error while pinging host: {ex}")
+        print(f"Fehler beim Pingen: {ex}")
 
 
 # ---------------------------------------------------------
 # Simulierter Update-Mechanismus
 # ---------------------------------------------------------
 
-UPDATE_URL = "http://example.com/fake-update.txt"
+UPDATE_URL = "https://example.com/fake-update.txt"  # Use HTTPS instead of HTTP
 LOCAL_UPDATE_FILE = "update_payload.txt"
+UPDATE_CHECKSUM_URL = "https://example.com/fake-update.txt.sha256"  # Checksum for integrity verification
 
 
 def check_for_update() -> bool:
@@ -165,14 +200,42 @@ def check_for_update() -> bool:
 
 def download_update() -> str:
     """
-    Simuliert den Download eines Updates von einem externen Server.
+    Simuliert den Download eines Updates von einem externen Server mit Integritätsprüfung.
     """
     logger.info(f"Downloading update from {UPDATE_URL}")
 
     try:
-        resp = requests.get(UPDATE_URL) 
+        # Download with certificate verification enabled (default in requests)
+        # and with timeout to prevent hanging
+        resp = requests.get(UPDATE_URL, verify=True, timeout=30)
         if resp.status_code == 200:
             payload = resp.text
+            
+            # Download checksum for integrity verification
+            try:
+                checksum_resp = requests.get(UPDATE_CHECKSUM_URL, verify=True, timeout=30)
+                if checksum_resp.status_code == 200:
+                    expected_checksum = checksum_resp.text.strip().split()[0]  # Get first field (checksum)
+                    
+                    # Calculate actual checksum
+                    actual_checksum = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+                    
+                    if actual_checksum != expected_checksum:
+                        logger.error("Update checksum verification failed!")
+                        print("Fehler: Update-Integritätsprüfung fehlgeschlagen.")
+                        return ""
+                    
+                    logger.info("Update checksum verified successfully.")
+                else:
+                    logger.warning("Could not download update checksum for verification.")
+                    print("Warnung: Checksum konnte nicht heruntergeladen werden. Update wird nicht angewendet.")
+                    return ""
+            except Exception as checksum_ex:
+                logger.exception(f"Error while verifying update checksum: {checksum_ex}")
+                print("Fehler bei der Checksum-Überprüfung. Update wird nicht angewendet.")
+                return ""
+            
+            # Write verified update to file
             with open(LOCAL_UPDATE_FILE, "w", encoding="utf-8") as f:
                 f.write(payload)
             logger.info("Update downloaded and stored locally.")
@@ -180,6 +243,14 @@ def download_update() -> str:
         else:
             logger.error(f"Update server responded with status {resp.status_code}")
             return ""
+    except requests.exceptions.SSLError as ssl_ex:
+        logger.exception(f"SSL certificate verification failed: {ssl_ex}")
+        print("Fehler: SSL-Zertifikat konnte nicht verifiziert werden.")
+        return ""
+    except requests.exceptions.Timeout:
+        logger.error("Update download timeout")
+        print("Fehler: Update-Download Timeout.")
+        return ""
     except Exception as ex:
         logger.exception(f"Error while downloading update: {ex}")
         return ""
@@ -213,13 +284,13 @@ def apply_update(file_path: str) -> None:
 
 def main_menu():
     print("=" * 50)
-    print(" Insecure Demo App (nur zu Schulungszwecken) ")
+    print(" Secure Demo App (mit Sicherheitsverbesserungen) ")
     print(f" Version: {APP_VERSION}")
     print("=" * 50)
     print("1) Login")
     print("2) Hash berechnen (SHA256)")
-    print("3) Host anpingen (Command Injection mglich)")
-    print("4) Nach Update suchen & anwenden")
+    print("3) Host anpingen (gesichert gegen Command Injection)")
+    print("4) Nach Update suchen & anwenden (mit Integritätsprüfung)")
     print("5) Beenden")
     print()
 
@@ -228,7 +299,7 @@ def main_menu():
 
 
 def main():
-    logger.info("Application started (INSECURE DEMO MODE)")
+    logger.info("Application started (SECURE MODE)")
 
     while True:
         choice = main_menu()

@@ -1,4 +1,12 @@
 .idea/
 
-# In a real project we must never commit the .env file which contains sensitive information
-# .env
+# Environment variables containing sensitive information
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Update payloads (temporary files)
+update_payload.txt
