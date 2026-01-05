@@ -4,7 +4,7 @@ Starter-Code fr Projekt C: CRA-konformes Patch- & Vulnerability-Handling
 
 ACHTUNG:
 Dieses Programm enthält ABSICHTLICH mehrere Sicherheitslücken und
-Designschwächen. Es dient ausschlielich Ausbildungszwecken
+Designschwächen. Es dient ausschließlich Ausbildungszwecken
 (Secure Coding, CRA, Vulnerability Handling).
 
 NICHT in Produktion einsetzen!
@@ -41,7 +41,7 @@ logging.basicConfig(
 
 logger = logging.getLogger("insecure_app")
 
-APP_VERSION = "1.0.0" 
+APP_VERSION = "1.1.0"
 
 
 # ---------------------------------------------------------
@@ -55,14 +55,17 @@ def create_user_db():
     """
     result = {}
 
-    initial_users = os.getenv("INITIAL_USERS")
-    if initial_users:
-        for entry in initial_users.split(","):
+    default_users = os.getenv("INITIAL_USERS")
+    if default_users:
+        for entry in default_users.split(","):
             try:
                 username, password = entry.split(":")
                 result[username.strip()] = password.strip()
             except ValueError:
                 raise RuntimeError(f"Invalid user entry in the INITIAL_USERS env variable: {entry}")
+
+        # In production, an alerting should be configured to fire if this log line is ever printed.
+        logger.warning(f"Loaded {len(default_users.split(","))} initial users from environment variable.")
 
     return result
 
@@ -148,10 +151,10 @@ LOCAL_UPDATE_FILE = "update_payload.txt"
 
 def check_for_update() -> bool:
     """
-    Simuliert eine Update-Prfung.
-    In der Realitt wrde z. B. eine API-Version abgefragt werden.
+    Simuliert eine Update-Prüfung.
+    In der Realität würde z. B. eine API-Version abgefragt werden.
 
-    Hier wird einfach "zufllig" entschieden.
+    Hier wird einfach "zufällig" entschieden.
     """
     # zur Vereinfachung: wir tun so, als gäbe es alle 2 Aufrufe ein "Update"
     ts = int(time.time())
@@ -218,7 +221,7 @@ def main_menu():
     print("=" * 50)
     print("1) Login")
     print("2) Hash berechnen (SHA256)")
-    print("3) Host anpingen (Command Injection mglich)")
+    print("3) Host anpingen (Command Injection möglich)")
     print("4) Nach Update suchen & anwenden")
     print("5) Beenden")
     print()
