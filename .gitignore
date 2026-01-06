@@ -10,3 +10,7 @@ __pycache__/
 
 # Update payloads (temporary files)
 update_payload.txt
+malicious_update.txt
+malicious_update.txt.sha256
+legitimate_update.txt
+legitimate_update.txt.sha256
