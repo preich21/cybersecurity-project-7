@@ -78,7 +78,12 @@ def login(username: str, password: str) -> bool:
     """
     Sehr vereinfachter Login.
     """
+    global LOGGED_IN_USER
+
     logger.info(f"Login attempt for user={username}")
+    if LOGGED_IN_USER is not None:
+        logger.warning(f"User {LOGGED_IN_USER} is already logged in. Logging them out first.")
+        LOGGED_IN_USER = None
 
     stored_pw_hash = USERS.get(username)
     if stored_pw_hash is None:
@@ -89,7 +94,6 @@ def login(username: str, password: str) -> bool:
     stored_pw_hash_bytes = stored_pw_hash.encode("utf-8")
     if bcrypt.checkpw(pw_bytes, stored_pw_hash_bytes):
         logger.info(f"User {username} successfully logged in")
-        global LOGGED_IN_USER
         LOGGED_IN_USER = username
         return True
 
