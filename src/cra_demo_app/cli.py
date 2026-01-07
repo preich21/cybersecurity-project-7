@@ -4,23 +4,32 @@ Starter-Code fr Projekt C: CRA-konformes Patch- & Vulnerability-Handling
 
 ACHTUNG:
 Dieses Programm enthält ABSICHTLICH mehrere Sicherheitslücken und
-Designschwächen. Es dient ausschlielich Ausbildungszwecken
+Designschwächen. Es dient ausschließlich Ausbildungszwecken
 (Secure Coding, CRA, Vulnerability Handling).
 
 NICHT in Produktion einsetzen!
 """
-
+import getpass
 import os
 import hashlib
 import logging
+import bcrypt
 import requests
 import time
+
+from dotenv import load_dotenv
 
 # ---------------------------------------------------------
 # Globale Konfiguration (mehrere Schwachstellen hier drin)
 # ---------------------------------------------------------
 
-SECRET_KEY = "1234567890abcdef"  
+load_dotenv()
+
+# Might as well be removed completely, since the app doesn't actually use it.
+# However, we keep it to illustrate the concept of secret keys.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("Environment variable SECRET_KEY is not set!")
 
 DEBUG = True
 
@@ -32,45 +41,99 @@ logging.basicConfig(
 
 logger = logging.getLogger("insecure_app")
 
-APP_VERSION = "1.0.0" 
+# Version aus uv package importieren
+from importlib.metadata import version
+APP_VERSION = version("cra-demo-app")
 
 
 # ---------------------------------------------------------
-# Dummy-User-Verwaltung (mit Schwachstellen)
+# Dummy-User-Verwaltung
 # ---------------------------------------------------------
 
-USERS = {
-    "alice": "password123",  
-    "bob": "qwerty",
-}
+def create_user_db():
+    """
+    Creates a dummy user database.
+    In a real project, we should definitely use a proper database that doesn't live in memory.
+    """
+    result = {}
+
+    default_users = os.getenv("INITIAL_USERS")
+    if default_users:
+        for entry in default_users.split(","):
+            try:
+                username, password = entry.split(":")
+                result[username.strip()] = password.strip()
+            except ValueError:
+                raise RuntimeError(f"Invalid user entry in the INITIAL_USERS env variable: {entry}")
+
+        # In production, an alerting should be configured to fire if this log line is ever printed.
+        logger.warning(f"Loaded {len(default_users.split(","))} initial users from environment variable.")
+
+    return result
+
+
+USERS = create_user_db()
+LOGGED_IN_USER: str|None = None
 
 
 def login(username: str, password: str) -> bool:
     """
     Sehr vereinfachter Login.
     """
-    logger.info(f"Login attempt for user={username} with password={password}")
+    global LOGGED_IN_USER
 
-    stored_pw = USERS.get(username)
-    if stored_pw is None:
-        logger.warning("Unknown user")
+    logger.info(f"Login attempt for user={username}")
+    if LOGGED_IN_USER is not None:
+        logger.warning(f"User {LOGGED_IN_USER} is already logged in. Logging them out first.")
+        LOGGED_IN_USER = None
+
+    stored_pw_hash = USERS.get(username)
+    if stored_pw_hash is None:
+        logger.warning(f"Unknown user [{username}]")
         return False
 
-    if stored_pw == password:
+    pw_bytes = password.encode("utf-8")
+    stored_pw_hash_bytes = stored_pw_hash.encode("utf-8")
+    if bcrypt.checkpw(pw_bytes, stored_pw_hash_bytes):
         logger.info(f"User {username} successfully logged in")
+        LOGGED_IN_USER = username
         return True
 
     logger.warning("Invalid password")
     return False
 
 
+def validate_authentication() -> bool:
+    """
+    Dummy function for user authentication validation.
+    Optimally, in a real application, the user should decorate each request with a valid JWT token or session cookie which we then verify here.
+    For simplicity, we assume the user is correctly authenticated once they have logged in.
+    """
+    if LOGGED_IN_USER is None:
+        logger.warning("User not authenticated.")
+        return False
+    elif USERS.get(LOGGED_IN_USER) is None:
+        logger.warning("Authenticated user not found in user database. This should never happen.")
+        return False
+    return True
+
+
+def logout() -> None:
+    """
+    Logs out the current user.
+    """
+    global LOGGED_IN_USER
+    if LOGGED_IN_USER:
+        logger.info(f"User {LOGGED_IN_USER} logged out.")
+    LOGGED_IN_USER = None
+
 
 def insecure_hash(data: str) -> str:
     """
-    Berechnet einen Hash ber die eingegebenen Daten.
+    Berechnet einen SHA256 Hash über die eingegebenen Daten.
     """
-    h = hashlib.md5(data.encode("utf-8")).hexdigest()
-    logger.debug(f"Calculated insecure MD5 hash for data={data}: {h}")
+    h = hashlib.sha256(data.encode("utf-8")).hexdigest()
+    logger.debug(f"Calculated SHA256 hash") # We could remove the whole log line, but maybe it's useful for tracing or something.
     return h
 
 
@@ -94,10 +157,10 @@ LOCAL_UPDATE_FILE = "update_payload.txt"
 
 def check_for_update() -> bool:
     """
-    Simuliert eine Update-Prfung.
-    In der Realitt wrde z. B. eine API-Version abgefragt werden.
+    Simuliert eine Update-Prüfung.
+    In der Realität würde z. B. eine API-Version abgefragt werden.
 
-    Hier wird einfach "zufllig" entschieden.
+    Hier wird einfach "zufällig" entschieden.
     """
     # zur Vereinfachung: wir tun so, als gäbe es alle 2 Aufrufe ein "Update"
     ts = int(time.time())
@@ -116,7 +179,7 @@ def download_update() -> str:
     logger.info(f"Downloading update from {UPDATE_URL}")
 
     try:
-        resp = requests.get(UPDATE_URL) 
+        resp = requests.get(UPDATE_URL)
         if resp.status_code == 200:
             payload = resp.text
             with open(LOCAL_UPDATE_FILE, "w", encoding="utf-8") as f:
@@ -144,7 +207,7 @@ def apply_update(file_path: str) -> None:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Wir tun nur so, als wrden wir "Code" übernehmen.
+        # Wir tun nur so, als würden wir "Code" übernehmen.
         # In einer echten (noch schlechteren) Variante könnte man hier exec() aufrufen.
             logger.debug(f"Update content preview:\n{content[:200]}")
 
@@ -163,8 +226,8 @@ def main_menu():
     print(f" Version: {APP_VERSION}")
     print("=" * 50)
     print("1) Login")
-    print("2) Insecure Hash berechnen (MD5)")
-    print("3) Host anpingen (Command Injection mglich)")
+    print("2) Hash berechnen (SHA256)")
+    print("3) Host anpingen (Command Injection möglich)")
     print("4) Nach Update suchen & anwenden")
     print("5) Beenden")
     print()
@@ -181,32 +244,42 @@ def main():
 
         if choice == "1":
             username = input("Benutzername: ")
-            password = input("Passwort: ")
+            password = getpass.getpass("Passwort: ")
             success = login(username, password)
             print("Login erfolgreich!" if success else "Login fehlgeschlagen.")
 
         elif choice == "2":
-            data = input("Text fr Hash-Berechnung: ")
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
+            data = input("Text für Hash-Berechnung: ")
             h = insecure_hash(data)
-            print(f"MD5-Hash: {h}")
+            print(f"SHA256-Hash: {h}")
 
         elif choice == "3":
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
             host = input("Host/IP zum Pingen: ")
             ping_host(host)
 
         elif choice == "4":
+            if not validate_authentication():
+                print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
+                continue
             if check_for_update():
                 path = download_update()
                 apply_update(path)
             else:
-                print("Kein Update verfgbar.")
+                print("Kein Update verfügbar.")
 
         elif choice == "5":
+            logout()
             print("Beende Programm.")
             break
 
         else:
-            print("Ungltige Auswahl.")
+            print("Ungültige Auswahl.")
 
 
 if __name__ == "__main__":

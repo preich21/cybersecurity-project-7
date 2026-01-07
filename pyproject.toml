@@ -1,7 +1,7 @@
 [project]
 name = "cra_demo_app"
-version = "1.2.0"
-description = "CRA demo app (training only) - insecure"
+version = "1.0.1"
+description = "CRA demo app (training only) - fixed & secure"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
