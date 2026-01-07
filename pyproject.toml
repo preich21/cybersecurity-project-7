@@ -1,0 +1,21 @@
+[project]
+name = "cra_demo_app"
+version = "1.0.0"
+description = "CRA demo app (training only) - insecure"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bcrypt==5.0.0",
+    "requests==2.32.5",
+    "python-dotenv==1.2.1",
+    "pytest==9.0.2",
+    "pexpect==4.9.0",
+    "cyclonedx-bom==7.2.1",
+]
+
+[project.scripts]
+cra_demo_app = "cra_demo_app.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
