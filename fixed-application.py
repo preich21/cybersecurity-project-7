@@ -9,7 +9,7 @@ Designschwächen. Es dient ausschließlich Ausbildungszwecken
 
 NICHT in Produktion einsetzen!
 """
-
+import getpass
 import os
 import hashlib
 import logging
@@ -238,7 +238,7 @@ def main():
 
         if choice == "1":
             username = input("Benutzername: ")
-            password = input("Passwort: ")
+            password = getpass.getpass("Passwort: ")
             success = login(username, password)
             print("Login erfolgreich!" if success else "Login fehlgeschlagen.")
 
