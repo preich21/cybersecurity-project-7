@@ -11,6 +11,7 @@ dependencies = [
     "pytest==9.0.2",
     "pexpect==4.9.0",
     "cyclonedx-bom==7.2.1",
+    "pyxtermjs==0.5.0.2"
 ]
 
 [project.scripts]
