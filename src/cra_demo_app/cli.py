@@ -9,6 +9,7 @@ Designschwächen. Es dient ausschließlich Ausbildungszwecken
 
 NICHT in Produktion einsetzen!
 """
+import argparse
 import getpass
 import os
 import hashlib
@@ -18,6 +19,9 @@ import requests
 import time
 
 from dotenv import load_dotenv
+
+# Import secure update system
+from . import secure_update
 
 # ---------------------------------------------------------
 # Globale Konfiguration (mehrere Schwachstellen hier drin)
@@ -148,72 +152,55 @@ def ping_host(host: str) -> None:
 
 
 # ---------------------------------------------------------
-# Simulierter Update-Mechanismus
+# Update-Mechanismus mit konfigurierbarer Sicherheit
 # ---------------------------------------------------------
 
-UPDATE_URL = "http://example.com/fake-update.txt"
-LOCAL_UPDATE_FILE = "update_payload.txt"
+# Global variable to store security configuration
+UPDATE_SECURITY_CONFIG = None
 
 
-def check_for_update() -> bool:
+def configure_update_security(args) -> None:
     """
-    Simuliert eine Update-Prüfung.
-    In der Realität würde z. B. eine API-Version abgefragt werden.
-
-    Hier wird einfach "zufällig" entschieden.
+    Configure update security features based on command-line arguments.
     """
-    # zur Vereinfachung: wir tun so, als gäbe es alle 2 Aufrufe ein "Update"
-    ts = int(time.time())
-    if ts % 2 == 0:
-        logger.info("Update available (simuliert)")
-        return True
-    else:
-        logger.info("No update available (simuliert)")
-        return False
+    global UPDATE_SECURITY_CONFIG
+    
+    UPDATE_SECURITY_CONFIG = secure_update.UpdateConfig(
+        use_https=args.use_https,
+        verify_checksum=args.verify_checksum,
+        verify_signature=args.verify_signature,
+        check_size_limit=args.check_size_limit,
+        prevent_rollback=args.prevent_rollback,
+        use_timeouts=args.use_timeouts,
+        atomic_writes=args.atomic_writes,
+        allow_redirects=args.allow_redirects,
+    )
 
 
-def download_update() -> str:
+def check_and_apply_update(demo_mode: bool = False) -> None:
     """
-    Simuliert den Download eines Updates von einem externen Server.
+    Check for updates using the configured security settings.
     """
-    logger.info(f"Downloading update from {UPDATE_URL}")
-
-    try:
-        resp = requests.get(UPDATE_URL)
-        if resp.status_code == 200:
-            payload = resp.text
-            with open(LOCAL_UPDATE_FILE, "w", encoding="utf-8") as f:
-                f.write(payload)
-            logger.info("Update downloaded and stored locally.")
-            return LOCAL_UPDATE_FILE
-        else:
-            logger.error(f"Update server responded with status {resp.status_code}")
-            return ""
-    except Exception as ex:
-        logger.exception(f"Error while downloading update: {ex}")
-        return ""
-
-
-def apply_update(file_path: str) -> None:
-    """
-    Simuliert das Anwenden eines Updates.
-    """
-    if not file_path:
-        logger.error("No update file to apply.")
+    if UPDATE_SECURITY_CONFIG is None:
+        print("❌ Update system not properly initialized.")
         return
-
-    logger.warning(f"Applying update from {file_path} WITHOUT validation (insecure).")
+    
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        # Wir tun nur so, als würden wir "Code" übernehmen.
-        # In einer echten (noch schlechteren) Variante könnte man hier exec() aufrufen.
-            logger.debug(f"Update content preview:\n{content[:200]}")
-
-            logger.info("Update applied (simuliert).")
-    except Exception as ex:
-        logger.exception(f"Failed to apply update: {ex}")
+        # Use the secure update system with configured security features
+        success = secure_update.check_for_update(
+            config=UPDATE_SECURITY_CONFIG,
+            demo_mode=demo_mode
+        )
+        
+        if success:
+            print("\n✅ Update downloaded successfully!")
+            # Apply the update
+            secure_update.apply_update(secure_update.LOCAL_UPDATE_FILE)
+            print("✅ Update applied successfully!\n")
+        else:
+            print("\n⚠️  No update available or update check failed.\n")
+    except Exception as e:
+        print(f"\n❌ Update failed: {e}\n")
 
 
 # ---------------------------------------------------------
@@ -222,8 +209,10 @@ def apply_update(file_path: str) -> None:
 
 def main_menu():
     print("=" * 50)
-    print(" Insecure Demo App (nur zu Schulungszwecken) ")
+    print(" CRA Demo App (Schulungszwecke) ")
     print(f" Version: {APP_VERSION}")
+    if UPDATE_SECURITY_CONFIG:
+        print(f" Update Security: {UPDATE_SECURITY_CONFIG.describe()}")
     print("=" * 50)
     print("1) Login")
     print("2) Hash berechnen (SHA256)")
@@ -236,8 +225,101 @@ def main_menu():
     return choice
 
 
-def main():
-    logger.info("Application started (INSECURE DEMO MODE)")
+def parse_arguments():
+    """Parse command-line arguments for security feature configuration."""
+    parser = argparse.ArgumentParser(
+        description="CRA Demo App - Configurable Update Security",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Security Feature Examples:
+  # Completely insecure (all features disabled):
+  python -m cra_demo_app.cli --no-https --no-checksum --no-signature --no-size-limit --no-rollback --no-timeouts --no-atomic --allow-redirects
+
+  # HTTPS only (transport security, no integrity):
+  python -m cra_demo_app.cli --no-checksum --no-signature --no-size-limit --no-rollback --no-atomic
+
+  # HTTPS + Checksum (integrity but no authenticity):
+  python -m cra_demo_app.cli --no-signature --no-rollback
+
+  # Fully secure (all features enabled - default):
+  python -m cra_demo_app.cli
+
+  # Demo mode with verbose output:
+  python -m cra_demo_app.cli --demo
+        """
+    )
+    
+    # Security feature flags (all enabled by default for secure-by-default)
+    parser.add_argument(
+        "--no-https",
+        dest="use_https",
+        action="store_false",
+        default=True,
+        help="Disable HTTPS requirement (allows HTTP - INSECURE)"
+    )
+    parser.add_argument(
+        "--no-checksum",
+        dest="verify_checksum",
+        action="store_false",
+        default=True,
+        help="Disable SHA256 checksum verification"
+    )
+    parser.add_argument(
+        "--no-signature",
+        dest="verify_signature",
+        action="store_false",
+        default=True,
+        help="Disable cryptographic signature verification"
+    )
+    parser.add_argument(
+        "--no-size-limit",
+        dest="check_size_limit",
+        action="store_false",
+        default=True,
+        help="Disable update size limit checks"
+    )
+    parser.add_argument(
+        "--no-rollback",
+        dest="prevent_rollback",
+        action="store_false",
+        default=True,
+        help="Disable rollback protection (allows downgrades)"
+    )
+    parser.add_argument(
+        "--no-timeouts",
+        dest="use_timeouts",
+        action="store_false",
+        default=True,
+        help="Disable request timeouts"
+    )
+    parser.add_argument(
+        "--no-atomic",
+        dest="atomic_writes",
+        action="store_false",
+        default=True,
+        help="Disable atomic file writes"
+    )
+    parser.add_argument(
+        "--allow-redirects",
+        dest="allow_redirects",
+        action="store_true",
+        default=False,
+        help="Allow HTTP redirects (can be exploited)"
+    )
+    parser.add_argument(
+        "--demo",
+        dest="demo_mode",
+        action="store_true",
+        default=False,
+        help="Enable verbose demo mode with detailed output"
+    )
+    
+    return parser.parse_args()
+
+
+def interactive_mode(demo_mode: bool = False):
+    """Run the interactive CLI menu."""
+    logger.info("Application started")
 
     while True:
         choice = main_menu()
@@ -267,11 +349,7 @@ def main():
             if not validate_authentication():
                 print("Diese Funktionalität steht nur eingeloggten Benutzern zur Verfügung.")
                 continue
-            if check_for_update():
-                path = download_update()
-                apply_update(path)
-            else:
-                print("Kein Update verfügbar.")
+            check_and_apply_update(demo_mode=demo_mode)
 
         elif choice == "5":
             logout()
@@ -280,6 +358,21 @@ def main():
 
         else:
             print("Ungültige Auswahl.")
+
+
+def main():
+    """Main entry point with argument parsing."""
+    args = parse_arguments()
+    
+    # Configure update security based on arguments
+    configure_update_security(args)
+    
+    # Show warning only if running with reduced security
+    if not args.use_https or not args.verify_signature:
+        print("\nWARNING: Running with reduced security for DEMONSTRATION purposes!\n")
+    
+    # Run interactive mode
+    interactive_mode(demo_mode=args.demo_mode)
 
 
 if __name__ == "__main__":
