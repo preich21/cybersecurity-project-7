@@ -33,7 +33,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 logger = logging.getLogger("secure_update")
 
-UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/preich21/cybersecurity-project-7/main/demo_files/manifest.json"
+UPDATE_MANIFEST_URL = "http://raw.githubusercontent.com/preich21/cybersecurity-project-7/refs/heads/fix/cli/demo_files/manifest.json"
+UPDATE_URL = "http://raw.githubusercontent.com/preich21/cybersecurity-project-7/refs/heads/fix/cli/demo_files/fake-update.txt"
 
 # Security constraints
 MAX_UPDATE_BYTES = 5 * 1024 * 1024  # 5MB
@@ -348,10 +349,12 @@ def check_for_update(
     demo_mode: bool = False
 ) -> bool:
     """
-    Feature-based update system - enable/disable security controls as needed.
+    Automatic mode selection based on security features:
+    - If signature verification is DISABLED: Use direct URL mode (evolutionary demo)
+    - If signature verification is ENABLED: Use manifest mode (full security)
     
     Args:
-        manifest_url: URL to the update manifest
+        manifest_url: URL to the update manifest (used only if verify_signature=True)
         public_key_b64: Base64-encoded Ed25519 public key for signature verification
         config: UpdateConfig specifying which security features to enable
         demo_mode: Enable verbose demo output
@@ -362,10 +365,29 @@ def check_for_update(
     if config is None:
         config = UpdateConfig()  # All security features enabled by default
     
-    logger.info(f"Update check with features: {config.describe()}")
+    logger.info(f"🔐 Update check with features: {config.describe()}")
     
-    if config.verify_signature and public_key_b64 == "REPLACE_ME_WITH_YOUR_PUBLIC_KEY_BASE64":
-        logger.error("Public key not configured! Run publisher_tools/gen_keys.py first.")
+    # AUTOMATIC MODE SELECTION
+    if not config.verify_signature:
+        # Direct URL mode (Levels 0-2: No signature verification)
+        logger.info("📦 Using DIRECT URL mode (no signature verification)")
+        
+        checksum_url = None
+        if config.verify_checksum:
+            checksum_url = UPDATE_URL + ".sha256"
+            logger.info(f"   Will fetch checksum from: {checksum_url}")
+        
+        return direct_url_update(
+            update_url=UPDATE_URL,
+            checksum_url=checksum_url,
+            config=config
+        )
+    
+    # Manifest mode (Level 3: Full security with signatures)
+    logger.info("📋 Using MANIFEST mode (signature verification enabled)")
+    
+    if public_key_b64 == "REPLACE_ME_WITH_YOUR_PUBLIC_KEY_BASE64":
+        logger.error("❌ Public key not configured! Run publisher_tools/gen_keys.py first.")
         return False
     
     try:
@@ -392,20 +414,17 @@ def check_for_update(
             print(f"Security:     {config.describe()}")
             print(f"{'='*70}\n")
         
-        # Signature verification (if enabled)
-        if config.verify_signature:
-            try:
-                verify_manifest_signature(manifest, public_key_b64)
-                if demo_mode:
-                    print("SIGNATURE VERIFIED - Update is authentic!\n")
-            except (InvalidSignature, ValueError) as e:
-                if demo_mode:
-                    print("SIGNATURE INVALID - Update rejected!\n")
-                    print("This proves the attacker cannot forge updates even if they")
-                    print("control the network or server - they don't have the private key!\n")
-                raise RuntimeError(f"Manifest signature invalid: {e}")
-        else:
-            logger.warning("Signature verification DISABLED - updates not authenticated!")
+        # Signature verification
+        try:
+            verify_manifest_signature(manifest, public_key_b64)
+            if demo_mode:
+                print("✅ SIGNATURE VERIFIED - Update is authentic!\n")
+        except (InvalidSignature, ValueError) as e:
+            if demo_mode:
+                print("❌ SIGNATURE INVALID - Update rejected!\n")
+                print("This proves the attacker cannot forge updates even if they")
+                print("control the network or server - they don't have the private key!\n")
+            raise RuntimeError(f"Manifest signature invalid: {e}")
         
         # Anti-rollback check (if enabled)
         if config.prevent_rollback:
@@ -416,7 +435,7 @@ def check_for_update(
                 )
                 return False
         else:
-            logger.warning("Rollback protection DISABLED - downgrades allowed!")
+            logger.warning("⚠️  Rollback protection DISABLED - downgrades allowed!")
         
         logger.info(f"Downloading version: {manifest.version}")
         
@@ -425,7 +444,7 @@ def check_for_update(
         if config.prevent_rollback:
             _save_installed_version(manifest.version)
         
-        logger.info(f"Update {manifest.version} ready to apply: {payload_path}")
+        logger.info(f"✅ Update {manifest.version} ready to apply: {payload_path}")
         return True
     except Exception as e:
         logger.exception(f"Update failed: {e}")
@@ -492,6 +511,70 @@ def insecure_update(update_url: str) -> bool:
     except Exception as e:
         logger.exception(f"Update failed: {e}")
         return False
+
+def direct_url_update(
+    update_url: str,
+    checksum_url: Optional[str] = None,
+    config: Optional[UpdateConfig] = None
+) -> bool:
+    """
+    Direct URL update without manifest (evolutionary approach).
+    
+    This demonstrates the evolution of security:
+    - Level 0: Just download from URL (no checksum)
+    - Level 1: Add HTTPS
+    - Level 2: Add checksum verification from separate .sha256 file
+    - Level 3: Use manifest with signature (see check_for_update)
+    
+    Args:
+        update_url: Direct URL to the update file
+        checksum_url: Optional URL to .sha256 file (e.g., update_url + ".sha256")
+        config: Security configuration
+    
+    Returns:
+        True if update was downloaded successfully, False otherwise
+    """
+    if config is None:
+        config = UpdateConfig()
+    
+    expected_sha256 = ""
+    expected_size = 0
+    
+    # If checksum verification is enabled and checksum_url provided, fetch it
+    if config.verify_checksum and checksum_url:
+        try:
+            logger.info(f"Fetching checksum from: {checksum_url}")
+            timeout = REQUEST_TIMEOUT if config.use_timeouts else None
+            resp = requests.get(checksum_url, timeout=timeout, verify=True)
+            resp.raise_for_status()
+            
+            # Parse checksum file (format: "hash  filename")
+            checksum_content = resp.text.strip()
+            parts = checksum_content.split()
+            if parts:
+                expected_sha256 = parts[0].lower()
+                logger.info(f"Expected SHA256: {expected_sha256}")
+        except Exception as e:
+            logger.error(f"Failed to fetch checksum: {e}")
+            if config.verify_checksum:
+                return False
+    
+    # Create a minimal manifest for the direct URL
+    manifest = UpdateManifest(
+        version="unknown",
+        payload_url=update_url,
+        sha256=expected_sha256,
+        size=expected_size,
+    )
+    
+    try:
+        payload_path = download_and_verify_payload(manifest, config)
+        logger.info(f"✓ Update downloaded: {payload_path}")
+        return True
+    except Exception as e:
+        logger.exception(f"Update failed: {e}")
+        return False
+
 
 
 def https_only_update(update_url: str) -> bool:

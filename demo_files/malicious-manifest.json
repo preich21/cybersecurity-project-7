@@ -1,7 +1,7 @@
 {
   "version": "99.99.99",
   "payload_url": "http://localhost:8080/malicious-update.txt",
-  "sha256": "fake_hash_that_matches_malicious_payload_1234567890abcdef",
+  "sha256": "2635118926f651bbd048fc2b91f34b91c763754d34c5a0c815385908cdaa500e",
   "size": 500,
-  "signature": "FAKE_SIGNATURE_THAT_ATTACKER_CANNOT_FORGE_WITHOUT_PRIVATE_KEY"
+  "signature": "Fx7FcvIOccJdVjtVCKdGBqN2yRZqeirUBBoXrOm1cY0gL2XLP3bEeXW577d1tIOocs0nrrWT1jPCmv+pa3gmAw=="
 }
