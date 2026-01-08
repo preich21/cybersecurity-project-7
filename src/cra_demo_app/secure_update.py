@@ -45,7 +45,7 @@ LOCAL_UPDATE_FILE = "update_payload.txt"
 LOCAL_VERSION_FILE = ".installed_version"
 
 # Ed25519 public key (32 bytes, base64-encoded)
-PINNED_PUBKEY_B64 = "SN278Y1/+T1KZJbtFbeVVaj+6kG82PSt4Y28l1Hk4es="
+PINNED_PUBKEY_B64 = "wgJnqh33nwODmyWSuq7SHyKr5OZ5NKyTwav0Ij27uao="
 
 
 @dataclass
