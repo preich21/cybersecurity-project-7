@@ -180,13 +180,14 @@ def configure_update_security(args) -> None:
 def check_and_apply_update(demo_mode: bool = False) -> None:
     """
     Check for updates using the configured security settings.
+    Mode is automatically selected based on signature verification setting.
     """
     if UPDATE_SECURITY_CONFIG is None:
         print("❌ Update system not properly initialized.")
         return
     
     try:
-        # Use the secure update system with configured security features
+        # Mode is automatically selected in check_for_update based on config
         success = secure_update.check_for_update(
             config=UPDATE_SECURITY_CONFIG,
             demo_mode=demo_mode
