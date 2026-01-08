@@ -14,6 +14,9 @@ import getpass
 import os
 import hashlib
 import logging
+import re
+import subprocess
+
 import bcrypt
 import requests
 import time
@@ -141,15 +144,41 @@ def insecure_hash(data: str) -> str:
     return h
 
 
+# Allow either a reasonable hostname (labels separated by dots) or an IPv4 address.
+_HOST_RE = re.compile(
+    r"^(?:"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}"
+    r"|"
+    r"(?:\d{1,3}\.){3}\d{1,3}"
+    r")$"
+)
 
 def ping_host(host: str) -> None:
     """
     Pingt einen Host an.
    """
-    command = f"ping -c 1 {host}"
-    logger.info(f"Executing command: {command}")
-    os.system(command)  # <-- unsicher, host kann z. B. '8.8.8.8; rm -rf /' sein
+    # Regex checking, um Argument abuse / option injection zu verhindern (man kann sonst argumente zum gewählten programm mitgeben)
+    host = host.strip()
+    if not _HOST_RE.fullmatch(host):
+        logger.error("Invalid host. Only hostnames or IPv4 addresses are allowed.")
+        return
 
+    # If it's IPv4, ensure each octet is 0..255
+    if host.count(".") == 3 and host.replace(".", "").isdigit():
+        octets = host.split(".")
+        if any(not 0 <= int(o) <= 255 for o in octets):
+            logger.error("Invalid IPv4 address.")
+            return
+
+    logger.info("Pinging host: %s", host)
+
+    # verhindert shell injection weil keine Shell Metacharacter wie ; && | etc. parsed
+    command = ["ping", "-c", "1", host]
+    logger.info(f"Executing command: {command}")
+    subprocess.run(
+        command,
+        check=False,
+    )
 
 # ---------------------------------------------------------
 # Update-Mechanismus mit konfigurierbarer Sicherheit
@@ -217,7 +246,7 @@ def main_menu():
     print("=" * 50)
     print("1) Login")
     print("2) Hash berechnen (SHA256)")
-    print("3) Host anpingen (Command Injection möglich)")
+    print("3) Host anpingen (Command Injection nicht mehr möglich)")
     print("4) Nach Update suchen & anwenden")
     print("5) Beenden")
     print()
