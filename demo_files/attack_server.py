@@ -79,7 +79,7 @@ class AttackServerHandler(http.server.SimpleHTTPRequestHandler):
             "payload_url": "http://raw.githubusercontent.com/preich21/cybersecurity-project-7/refs/heads/fix/cli/demo_files/fake-update.txt",
             "sha256": actual_hash,
             "size": actual_size,
-            "signature": "FAKE_SIGNATURE_THAT_ATTACKER_CANNOT_FORGE_WITHOUT_PRIVATE_KEY"
+            "signature": "Fx7FcvIOccJdVjtVCKdGBqN2yRZqeirUBBoXrOm1cY0gL2XLP3bEeXW577d1tIOocs0nrrWT1jPCmv+pa3gmAw=="
         }
         
         print(f"   Version: {manifest['version']} (MALICIOUS!)")
