@@ -18,6 +18,13 @@ Then run the application using:
 uv run cra_demo_app
 ```
 
+#### Docker
+
+You can run the application using Docker exposing the CLI via webpage using the following command:
+```bash
+docker compose up -d
+```
+
 ### SBOM
 
 The `sbom.json` file contains all dependencies of this project and was generated using:
