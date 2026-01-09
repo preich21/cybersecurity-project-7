@@ -1,0 +1,18 @@
+🚨 MALICIOUS UPDATE 🚨
+
+This is a FAKE update created by an attacker!
+
+If you see this message, it means:
+- The attacker successfully redirected your traffic
+- The attacker served a fake update
+- BUT: The signature verification should FAIL
+
+This demonstrates why signed updates are critical for security.
+
+Malicious payload would contain:
+- Backdoors
+- Data exfiltration code
+- Ransomware
+- Supply chain attack code
+
+In a real attack, this would compromise your system!

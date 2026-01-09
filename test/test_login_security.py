@@ -9,7 +9,6 @@ Tests verify:
 
 import subprocess
 import sys
-import re
 import os
 import bcrypt
 import pytest
@@ -44,9 +43,8 @@ class TestLoginSecurity:
         # Run the application with pexpect to handle password prompts
         child = pexpect.spawn(
             sys.executable,
-            ['fixed-application.py'],
+            ['-m', 'cra_demo_app.cli'],
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             timeout=5,
             encoding='utf-8'
         )
@@ -112,12 +110,11 @@ class TestLoginSecurity:
         input_data = "2\ntest data\n5\n"
 
         process = subprocess.Popen(
-            [sys.executable, 'fixed-application.py'],
+            [sys.executable, '-m', 'cra_demo_app.cli'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             text=True
         )
 
@@ -144,12 +141,11 @@ class TestLoginSecurity:
         input_data = "3\n8.8.8.8\n5\n"
 
         process = subprocess.Popen(
-            [sys.executable, 'fixed-application.py'],
+            [sys.executable, '-m', 'cra_demo_app.cli'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             text=True
         )
 
@@ -176,12 +172,11 @@ class TestLoginSecurity:
         input_data = "4\n5\n"
 
         process = subprocess.Popen(
-            [sys.executable, 'fixed-application.py'],
+            [sys.executable, '-m', 'cra_demo_app.cli'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             text=True
         )
 
@@ -210,12 +205,11 @@ class TestLoginSecurity:
         input_data = "5\n"
 
         process = subprocess.Popen(
-            [sys.executable, 'fixed-application.py'],
+            [sys.executable, '-m', 'cra_demo_app.cli'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             text=True
         )
 
@@ -238,9 +232,8 @@ class TestLoginSecurity:
         # Run the application with pexpect
         child = pexpect.spawn(
             sys.executable,
-            ['fixed-application.py'],
+            ['-m', 'cra_demo_app.cli'],
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             timeout=5,
             encoding='utf-8'
         )
@@ -274,7 +267,7 @@ class TestLoginSecurity:
             # Try to access update function (option 4)
             child.expect('Auswahl:')
             child.sendline('4')
-            child.expect(['Kein Update verfügbar.', 'Update verfügbar'])
+            child.expect('Update check with features')
 
             # Exit
             child.expect('Auswahl:')
@@ -299,9 +292,8 @@ class TestLoginSecurity:
 
         child = pexpect.spawn(
             sys.executable,
-            ['fixed-application.py'],
+            ['-m', 'cra_demo_app.cli'],
             env=env,
-            cwd='/develop/pse/it-security/cybersecurity-project-7',
             timeout=5,
             encoding='utf-8'
         )
@@ -340,7 +332,7 @@ class TestLoginSecurity:
             if child.isalive():
                 child.terminate(force=True)
 
-        print("✓ Test passed: Failed login denies access to protected functions")
+        print("Test passed: Failed login denies access to protected functions")
 
 
 if __name__ == "__main__":

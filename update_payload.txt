@@ -1,0 +1,8 @@
+This is a legitimate update v1.0.1
+
+New features:
+- Improved security
+- Bug fixes
+- Performance enhancements
+
+This update has been signed by the publisher.
