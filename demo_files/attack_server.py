@@ -21,6 +21,9 @@ from pathlib import Path
 class AttackServerHandler(http.server.SimpleHTTPRequestHandler):
     """Custom handler that mimics GitHub raw URL structure and serves malicious content."""
     
+    # Class variable to control checksum exposure
+    expose_checksum = False
+    
     def log_message(self, format, *args):
         """Override to add colored output."""
         print(f"🔴 [ATTACKER] {self.address_string()} - {format % args}")
@@ -117,7 +120,15 @@ class AttackServerHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(content)
     
     def serve_checksum_file(self):
-        """Serve MALICIOUS checksum file (matches malicious payload)."""
+        """Serve MALICIOUS checksum file (matches malicious payload) - if enabled."""
+        if not self.expose_checksum:
+            print("\n" + "="*70)
+            print("🛡️  DEFENSE: Checksum file NOT exposed (404)")
+            print("   Attack will fail - no valid checksum available!")
+            print("="*70 + "\n")
+            self.send_error(404, "Checksum file not found")
+            return
+        
         print("\n" + "="*70)
         print("🚨 ATTACK: Serving MALICIOUS checksum file")
         print("   (Checksum matches malicious payload!)")
@@ -140,8 +151,11 @@ class AttackServerHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(content.encode())
 
 
-def run_attack_server(port=80):
+def run_attack_server(port=80, expose_checksum=False):
     """Start the attack server on the specified port."""
+    
+    # Set the class variable for checksum exposure
+    AttackServerHandler.expose_checksum = expose_checksum
     
     # Change to demo_files directory
     demo_dir = Path(__file__).parent
@@ -152,6 +166,7 @@ def run_attack_server(port=80):
     print("="*70)
     print(f"Port: {port}")
     print(f"Directory: {demo_dir}")
+    print(f"Checksum Exposure: {'✅ ENABLED (attack will succeed)' if expose_checksum else '❌ DISABLED (attack will fail)'}")
     print("\nThis server mimics GitHub's raw.githubusercontent.com")
     print("to demonstrate DNS hijacking and MITM attacks.\n")
     print("="*70)
@@ -164,6 +179,8 @@ def run_attack_server(port=80):
     print("   uv run python -m cra_demo_app.cli --no-https --no-signature --demo")
     print("\n4. Select option 4 to check for updates")
     print("\n5. Watch as the 'GitHub' server serves malicious content!")
+    if not expose_checksum:
+        print("\n💡 TIP: Attack will fail without checksum. Restart with --expose-checksum to succeed.")
     print("\n" + "="*70)
     print("\n⚠️  REMEMBER TO CLEANUP:")
     print("   sudo nano /etc/hosts")
@@ -188,14 +205,21 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Serve malicious updates on port 80 (standard HTTP port)
+  # Serve malicious updates on port 80 (checksum disabled - attack fails)
   sudo python3 attack_server.py
+  
+  # Enable checksum exposure to demonstrate successful attack
+  sudo python3 attack_server.py --expose-checksum
   
   # Use port 8080 if you don't have sudo
   python3 attack_server.py --port 8080
 
 Note: Port 80 requires sudo. The app uses HTTP for the demo,
       making it simple to demonstrate DNS hijacking attacks.
+      
+Demo Flow:
+  1. Run without --expose-checksum: Attack fails (no valid checksum)
+  2. Run with --expose-checksum: Attack succeeds (valid checksum provided)
         """
     )
     parser.add_argument(
@@ -203,6 +227,11 @@ Note: Port 80 requires sudo. The app uses HTTP for the demo,
         type=int,
         default=80,
         help='Port to run the server on (default: 80, requires sudo)'
+    )
+    parser.add_argument(
+        '--expose-checksum',
+        action='store_true',
+        help='Expose the malicious checksum file (enables successful attack)'
     )
     
     args = parser.parse_args()
@@ -212,7 +241,7 @@ Note: Port 80 requires sudo. The app uses HTTP for the demo,
         print("\n⚠️  WARNING: Not using port 80")
         print("   For best results, use: sudo python3 attack_server.py\n")
     
-    run_attack_server(args.port)
+    run_attack_server(args.port, args.expose_checksum)
 
 
 if __name__ == '__main__':
