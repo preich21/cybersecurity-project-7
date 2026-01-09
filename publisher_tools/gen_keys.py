@@ -53,5 +53,3 @@ def generate_keypair():
 
 if __name__ == "__main__":
     generate_keypair()
-
-# Made with Bob
